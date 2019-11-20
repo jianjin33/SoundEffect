@@ -168,27 +168,6 @@ public class MainActivity extends Activity implements OnTouchListener, Runnable
 	
     static 
     {
-    	/*
-    	 * To simplify our examples we try to load all possible FMOD
-    	 * libraries, the Android.mk will copy in the correct ones
-    	 * for each example. For real products you would just load
-    	 * 'fmod' and if you use the FMOD Studio tool you would also
-    	 * load 'fmodstudio'.
-    	 */
-
-//    	// Try debug libraries...
-//    	try { System.loadLibrary("fmodD");
-//    		  System.loadLibrary("fmodstudioD"); }
-//    	catch (UnsatisfiedLinkError e) { }
-//    	// Try logging libraries...
-//    	try { System.loadLibrary("fmodL");
-//    		  System.loadLibrary("fmodstudioL"); }
-//    	catch (UnsatisfiedLinkError e) { }
-//		// Try release libraries...
-//		try { System.loadLibrary("fmod");
-//		      System.loadLibrary("fmodstudio"); }
-//		catch (UnsatisfiedLinkError e) { }
-    	
     	System.loadLibrary("effect-lib");
     }
 }

@@ -10,7 +10,7 @@ SET(PROJECT_ROOT_PATH "${CMAKE_SOURCE_DIR}/../../../../app")
 
 add_library(effect-lib
         SHARED
-#        effect-lib.cpp
+        effect-lib.cpp
         effects.cpp
         common.cpp
         common_platform.cpp)
