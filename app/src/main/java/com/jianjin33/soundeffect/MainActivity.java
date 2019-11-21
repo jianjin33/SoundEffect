@@ -168,6 +168,14 @@ public class MainActivity extends Activity implements OnTouchListener, Runnable
 	
     static 
     {
-    	System.loadLibrary("effect-lib");
+        try {
+            System.loadLibrary("fmodL");
+        }catch (UnsatisfiedLinkError e) { }
+        // Try release libraries...
+        try {
+            System.loadLibrary("fmod");
+        }catch (UnsatisfiedLinkError e) { }
+
+        System.loadLibrary("effect-lib");
     }
 }

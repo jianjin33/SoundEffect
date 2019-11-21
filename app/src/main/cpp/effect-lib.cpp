@@ -26,170 +26,152 @@
 using namespace std;
 using namespace FMOD;
 
+static bool gPause = false;
 
-extern "C" JNIEXPORT void JNICALL
-SoundEffect(JNIEnv *env, jobject thiz, jstring path, jint mode) {
-   const char *input = env->GetStringUTFChars(path, JNI_FALSE);
-    LOGI("%s", input);
+static int gPlayCount = 0;
+static bool gModeChanged = false;
+static const char *path;
+static int mode;
+JavaVM *g_jvm;
+JNIEnv *g_env;
+
+void *EffectByFMOD(void *argv) {
+    g_jvm->AttachCurrentThread(&g_env, NULL);
 
     bool playing = true;
-    System *system;
-    Sound *sound;
-    Channel *channel;
-    DSP *dsp;
+    System *system = 0;
+    Sound *sound = 0;
+    Channel *channel = 0;
+    ChannelGroup *channelGroup = 0;
+    DSP *dsp = 0;
     float frequency = 0;
 
     try {
-
         System_Create(&system);
         system->init(32, FMOD_INIT_NORMAL, NULL);
 
+        LOGI("PATH:%s", path);
+        system->getMasterChannelGroup(&channelGroup);
+
         //创建声音
-        system->createSound(input, FMOD_DEFAULT, NULL, &sound);
+        system->createSound(path, FMOD_DEFAULT, 0, &sound);
+
+        LOGI("MODE:%d", mode);
+
         switch (mode) {
             case MODE_NORMAL:
                 //原生播放
-                system->playSound(sound, 0, false, &channel);
-                LOGI("%s","fix normal");
+                LOGI("%s", "normal play");
+                system->playSound(sound, 0, 0, &channel);
                 break;
             case MODE_LUOLI:
                 // DSP digital signal process 数字信号处理
                 // FMOD_DSP_TYPE_PITCHSHIFT，提升或降低音调 用的一种音效;
                 system->createDSPByType(FMOD_DSP_TYPE_PITCHSHIFT, &dsp);
-                // 设置音调的参数
-                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH, 2.5);
                 system->playSound(sound, 0, false, &channel);
-                channel->addDSP(0, dsp);
+                channelGroup->addDSP(0, dsp);
+                // 设置音调的参数
+                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH, 1.4);
                 LOGI("%s", "luoli play");
                 break;
             case MODE_DASHU:
+                system->createDSPByType(FMOD_DSP_TYPE_PITCHSHIFT, &dsp);
+                system->playSound(sound, 0, false, &channel);
+                channelGroup->addDSP(0, dsp);
+                // 设置音调的参数
+                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH, 0.6);
                 break;
             case MODE_JINGSONG:
+                system->createDSPByType(FMOD_DSP_TYPE_TREMOLO, &dsp);
+                dsp->setParameterFloat(FMOD_DSP_TREMOLO_SKEW, 0.5);
+                system->playSound(sound, 0, false, &channel);
+                channel->addDSP(0, dsp);
                 break;
             case MODE_GAOGUAI:
+                system->playSound(sound, 0, false, &channel);
+                channel->getFrequency(&frequency);
+                frequency = frequency * 1.6;
+                channel->setFrequency(frequency);
                 break;
-
+            case MODE_KONGLING:
+                system->createDSPByType(FMOD_DSP_TYPE_ECHO, &dsp);
+                dsp->setParameterFloat(FMOD_DSP_ECHO_DELAY, 300);
+                dsp->setParameterFloat(FMOD_DSP_ECHO_FEEDBACK, 20);
+                system->playSound(sound, 0, false, &channel);
+                channel->addDSP(0, dsp);
+                break;
         }
     } catch (...) {
         LOGE("%s", "ERROR");
         goto end;
     }
 
-    system->update();
-
     while (playing) {
+        LOGI("%s", "正在播放");
+        if (gPause) {
+            LOGI("%s", "需要暂停");
+            gPause = false;
+            channel->setPaused(true);
+            goto end;
+        }
+
+        if (gModeChanged) {
+            gModeChanged = false;
+        }
+
+        system->update();
         channel->isPlaying(&playing);
         usleep(1000 * 1000);
-    }
+    };
     goto end;
 
     end:
-    env->ReleaseStringUTFChars(path, input);
+    LOGI("%s", "播放完成");
     sound->release();
     system->close();
     system->release();
- /*   System *system;
-    Sound *sound;
-    Channel *channel;
-    DSP *dsp;
-    bool playing = true;
-    float frequency = 0;
 
-    const char* path_cstr = env->GetStringUTFChars(path,NULL);
-    LOGI("%s",path_cstr);
-    try {
-        //初始化
-        System_Create(&system);
-        system->init(32, FMOD_INIT_NORMAL, NULL);
+    g_jvm->DetachCurrentThread();
+    return (void *) 0;
+}
 
-        //创建声音
-        system->createSound(path_cstr, FMOD_DEFAULT, NULL, &sound);
-        switch (mode) {
-            case MODE_NORMAL:
-                //原生播放
-                system->playSound(sound, 0, false, &channel);
-                LOGI("%s","fix normal");
-                break;
-            case MODE_LUOLI:
-                //萝莉
-                //DSP digital signal process
-                //dsp -> 音效 创建fmod中预定义好的音效
-                //FMOD_DSP_TYPE_PITCHSHIFT dsp，提升或者降低音调用的一种音效
-                system->createDSPByType(FMOD_DSP_TYPE_PITCHSHIFT,&dsp);
-                //设置音调的参数
-                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH,2.5);
+extern "C" JNIEXPORT void JNICALL
+SoundEffect(JNIEnv *env, jobject thiz, jstring jpath, jint jmode) {
+    const char *cpath = env->GetStringUTFChars(jpath, JNI_FALSE);
+    LOGI("%s", cpath);
 
-                system->playSound(sound, 0, false, &channel);
-                //添加到channel
-                channel->addDSP(0,dsp);
-                LOGI("%s","fix luoli");
-                break;
+    //EffectByFMOD(NULL);
 
-            case MODE_JINGSONG:
-                //惊悚
-                system->createDSPByType(FMOD_DSP_TYPE_TREMOLO,&dsp);
-                dsp->setParameterFloat(FMOD_DSP_TREMOLO_SKEW, 0.5);
-                system->playSound(sound, 0, false, &channel);
-                channel->addDSP(0,dsp);
-
-                break;
-            case MODE_DASHU:
-                //大叔
-                system->createDSPByType(FMOD_DSP_TYPE_PITCHSHIFT,&dsp);
-                dsp->setParameterFloat(FMOD_DSP_PITCHSHIFT_PITCH,0.8);
-
-                system->playSound(sound, 0, false, &channel);
-                //添加到channel
-                channel->addDSP(0,dsp);
-                LOGI("%s","fix dashu");
-                break;
-            case MODE_GAOGUAI:
-                //搞怪
-                //提高说话的速度
-                system->playSound(sound, 0, false, &channel);
-                channel->getFrequency(&frequency);
-                frequency = frequency * 1.6;
-                channel->setFrequency(frequency);
-                LOGI("%s","fix gaoguai");
-                break;
-            case MODE_KONGLING:
-                //空灵
-                system->createDSPByType(FMOD_DSP_TYPE_ECHO,&dsp);
-                dsp->setParameterFloat(FMOD_DSP_ECHO_DELAY,300);
-                dsp->setParameterFloat(FMOD_DSP_ECHO_FEEDBACK,20);
-                system->playSound(sound, 0, false, &channel);
-                channel->addDSP(0,dsp);
-                LOGI("%s","fix kongling");
-                break;
-
-            default:
-                break;
-        }
-    } catch (...) {
-        LOGE("%s","发生异常");
-        goto end;
+    if (gPlayCount == 0) {
+        pthread_t pthread;
+        pthread_create(&pthread, NULL, EffectByFMOD, NULL);
+        gPlayCount++;
+    } else {
+        gModeChanged = true;
     }
-    system->update();
 
-    //释放资源
-    //单位是微秒
-    //每秒钟判断下是否在播放
-    while(playing){
-        channel->isPlaying(&playing);
-        usleep(1000 * 1000);
-    }
-    goto end;
-    end:
-    env->ReleaseStringUTFChars(path,path_cstr);
-    sound->release();
-    system->close();
-    system->release();*/
+
+    path = cpath;
+    mode = jmode;
+
+    env->ReleaseStringUTFChars(jpath, cpath);
+}
+
+
+extern "C" JNIEXPORT void JNICALL Start(JNIEnv *env, jobject thiz) {
+
+}
+
+extern "C" JNIEXPORT void JNICALL Pause(JNIEnv *env, jobject thiz) {
+    gPause = true;
 }
 
 
 // 动态注册
 static JNINativeMethod gMethods[] = {
         {"native_effect", "(Ljava/lang/String;I)V", (void *) SoundEffect},
+        {"native_start",  "()V",                    (void *) Start},
+        {"native_pause",  "()V",                    (void *) Pause},
 };
 
 static int RegisterNativeMethods(JNIEnv *env, const char *className,
@@ -222,6 +204,9 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         LOGE("%s", "GetEnv failed\n");
         goto bail;
     }
+
+    g_jvm = vm;
+    g_env = env;
 
     if (RegisterMethods(env) < 0) {
         LOGE("%s", "native registration failed\n");
