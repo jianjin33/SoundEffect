@@ -108,26 +108,33 @@ public class CustomActivity extends AppCompatActivity implements View.OnClickLis
                 break;
             case R.id.mode_normal:
                 mThreadHandler.sendEmptyMessage(EffectProcess.MODE_NORMAL);
+                handleState(true);
                 break;
             case R.id.mode_luoli:
                 mThreadHandler.sendEmptyMessage(EffectProcess.MODE_LUOLI);
+                handleState(true);
                 break;
             case R.id.mode_dashu:
                 mThreadHandler.sendEmptyMessage(EffectProcess.MODE_DASHU);
+                handleState(true);
                 break;
             case R.id.mode_jingsong:
                 mThreadHandler.sendEmptyMessage(EffectProcess.MODE_JINGSONG);
+                handleState(true);
                 break;
             case R.id.mode_gaoguai:
                 mThreadHandler.sendEmptyMessage(EffectProcess.MODE_GAOGUAI);
+                handleState(true);
                 break;
             case R.id.mode_kongling:
                 mThreadHandler.sendEmptyMessage(EffectProcess.MODE_KONGLING);
+                handleState(true);
                 break;
         }
     }
 
     public void handleState(boolean isStart) {
+        isPlaying = isStart;
         if (isStart)
             animView.startAnmi();
         else

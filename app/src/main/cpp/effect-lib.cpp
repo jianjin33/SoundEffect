@@ -33,16 +33,17 @@ static bool gModeChanged = false;
 static const char *path;
 static int mode;
 JavaVM *g_jvm;
-JNIEnv *g_env;
+
 
 void *EffectByFMOD(void *argv) {
-    g_jvm->AttachCurrentThread(&g_env, NULL);
+    JNIEnv *env;
+    g_jvm->AttachCurrentThread(&env, NULL);
 
     bool playing = true;
-    System *system = 0;
-    Sound *sound = 0;
-    Channel *channel = 0;
-    ChannelGroup *channelGroup = 0;
+    System *system;
+    Sound *sound ;
+    Channel *channel;
+    ChannelGroup *channelGroup;
     DSP *dsp = 0;
     float frequency = 0;
 
@@ -112,6 +113,7 @@ void *EffectByFMOD(void *argv) {
             LOGI("%s", "需要暂停");
             gPause = false;
             channel->setPaused(true);
+            gPlayCount = 0;
             goto end;
         }
 
@@ -204,9 +206,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         LOGE("%s", "GetEnv failed\n");
         goto bail;
     }
-
     g_jvm = vm;
-    g_env = env;
 
     if (RegisterMethods(env) < 0) {
         LOGE("%s", "native registration failed\n");
